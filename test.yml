@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: test.
+
+Parameters:
+  Project:
+    Type: String
+    Default: test
+
+  Environment:
+    Type: String
+    Description: Name of the environment this stack creates in (e.g. 'dev', 'prod').
+    Default: 'dev'
+    AllowedValues:
+      - 'dev'
+      - 'qa'
+      - 'uat'
+      - 'prod'
+
+Resources:
+
+###############
+# TEST LAMBDA #
+###############
+
+  CTQSummaryLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import json
+
+          def lambda_handler(event, context):
+              # TODO implement
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Placeholder Lambda!')
+              }
+              
+      Description: This lambda is a test one.
+      FunctionName: !Join ["-", [!Ref Project, !Ref Environment, "codepipeline-deploys"] ]
+      Handler: index.lambda_handler
+      Role: !GetAtt [TestLambdaRole, Arn]
+      Runtime: python3.6
+      Timeout: 900
+
+  # LAMBDA ROLE 
+  TestLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: !Join ["-", [!Ref Project, !Ref Environment, "test-codepipeline-policy"] ]
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: 'Allow'
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            Resource:
+            - !Join ["", ["arn:aws:logs:", !Ref "AWS::Region" , ":", !Ref "AWS::AccountId" , ":log-group:", "/aws/lambda/",!Ref Project, "-",!Ref Environment, "-", "summary-creation", ":*"] ]
+      RoleName: !Join ["-", [!Ref Project, !Ref Environment, "lambda-codepipeline-test-role"] ]
